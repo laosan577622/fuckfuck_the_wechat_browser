@@ -204,45 +204,11 @@ function getQuickTips(browser) {
 }
 
 
-async function copyText(text) {
-  if (navigator.clipboard && window.isSecureContext) {
-    await navigator.clipboard.writeText(text);
-    return true;
-  }
-
-  const textarea = document.createElement("textarea");
-  textarea.value = text;
-  textarea.setAttribute("readonly", "readonly");
-  textarea.style.position = "fixed";
-  textarea.style.opacity = "0";
-  document.body.appendChild(textarea);
-  textarea.select();
-  const success = document.execCommand("copy");
-  document.body.removeChild(textarea);
-  return success;
-}
-
-
 function App() {
   const [browser] = React.useState(() => new BrowserCheck());
-  const [copyState, setCopyState] = React.useState("idle");
 
   const helpSteps = getHelpSteps(browser);
   const quickTips = getQuickTips(browser);
-  const currentLink = window.location.href;
-
-  const handleCopy = async () => {
-    try {
-      await copyText(currentLink);
-      setCopyState("success");
-    } catch (error) {
-      setCopyState("error");
-    }
-
-    window.setTimeout(() => {
-      setCopyState("idle");
-    }, 2200);
-  };
 
   const isBlocked = browser.BlockedMessenger;
   const title = isBlocked
@@ -289,14 +255,7 @@ function App() {
             <p className="hero-description">{description}</p>
 
             <div className="hero-actions">
-              <button className="capsule-button capsule-button-primary" onClick={handleCopy}>
-                {copyState === "success"
-                  ? "链接已复制"
-                  : copyState === "error"
-                    ? "复制失败，请手动复制"
-                    : "复制当前地址"}
-              </button>
-              <a className="capsule-button capsule-button-secondary" href="#steps">
+              <a className="capsule-button capsule-button-primary" href="#steps">
                 查看操作步骤
               </a>
             </div>
