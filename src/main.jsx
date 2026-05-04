@@ -3,6 +3,11 @@ import { createRoot } from "react-dom/client";
 import "./styles.css";
 
 
+const THREE_DOT_HINT =
+  "有些客户端可能需要左右滑动，若您在点击三个点后没有看到相关选项，可以尝试在每行都试试左右滑动";
+const THREE_DOT_TEXT = `右上角三个点（${THREE_DOT_HINT}）`;
+
+
 class BrowserCheck {
   constructor(userAgent = navigator.userAgent || "") {
     const ua = userAgent;
@@ -27,6 +32,8 @@ class BrowserCheck {
     this.UCBrowser = /UCBrowser/i.test(ua);
     this.QQ = /QQ\//i.test(ua) || /V1_AND_SQ_/i.test(ua);
     this.QQBrowser = /MQQBrowser/i.test(ua) && !this.QQ;
+    this.DesktopWechat =
+      this.Wechat && !/Mobile|Android|iPhone|iPad|iPod/i.test(ua) && !isTouchMac;
     this.BlockedMessenger = this.Wechat || this.QQ;
   }
 }
@@ -151,7 +158,9 @@ function StepsIcon() {
 function EnvironmentBadge({ browser }) {
   let label = "外部浏览器";
 
-  if (browser.Wechat) {
+  if (browser.DesktopWechat) {
+    label = "微信 PC 端打开";
+  } else if (browser.Wechat) {
     label = "微信内打开";
   } else if (browser.QQ) {
     label = "QQ 内打开";
@@ -200,12 +209,33 @@ function StepCard({ index, step }) {
 
 function getHelpSteps(browser, targetUrl) {
   if (targetUrl) {
+    if (browser.DesktopWechat) {
+      return [
+        {
+          title: "请点击右上角小地球图标",
+          description: "在微信 PC 端内置浏览器右上角点击小地球图标。",
+        },
+        {
+          title: "等待系统浏览器打开",
+          description: "系统浏览器接管当前页面后，会重新访问这个检测地址。",
+        },
+        {
+          title: "确认环境切换",
+          description: "页面重新进入 Safari、Chrome 或系统默认浏览器后，会再次完成环境检测。",
+        },
+        {
+          title: "自动跳转目标网页",
+          description: "只要检测到不在微信 / QQ 内置浏览器中，就会直接跳转到拼接的目标地址。",
+        },
+      ];
+    }
+
     const sourceName = browser.Wechat ? "微信" : browser.QQ ? "QQ" : "当前应用";
 
     return [
       {
-        title: "单击右上角三个点",
-        description: `在${sourceName}内置浏览器右上角打开更多菜单。`,
+        title: `单击${THREE_DOT_TEXT}`,
+        description: `在${sourceName}内置浏览器点击${THREE_DOT_TEXT}打开更多菜单。`,
       },
       {
         title: "选择浏览器打开",
@@ -251,14 +281,19 @@ function getQuickTips(browser, targetUrl) {
   if (targetUrl) {
     if (browser.Wechat || browser.QQ) {
       tips.push("已识别到当前 URL 后拼接了目标网页，离开微信 / QQ 后会自动跳转。");
-      tips.push("请使用右上角三个点菜单里的“浏览器打开”，不要继续停留在内置浏览器里访问目标页。");
 
-      if (browser.Wechat) {
-        tips.push("微信里通常在右上角更多菜单中选择“在浏览器打开”。");
-      }
+      if (browser.DesktopWechat) {
+        tips.push("请点击右上角小地球图标，不要继续停留在微信 PC 端内置浏览器里访问目标页。");
+      } else {
+        tips.push(`请使用${THREE_DOT_TEXT}菜单里的“浏览器打开”，不要继续停留在内置浏览器里访问目标页。`);
 
-      if (browser.QQ) {
-        tips.push("QQ 里通常在右上角更多菜单中选择“浏览器打开”。");
+        if (browser.Wechat) {
+          tips.push(`微信里通常在${THREE_DOT_TEXT}菜单中选择“在浏览器打开”。`);
+        }
+
+        if (browser.QQ) {
+          tips.push(`QQ 里通常在${THREE_DOT_TEXT}菜单中选择“浏览器打开”。`);
+        }
       }
     } else {
       tips.push("当前已不在微信 / QQ 内置浏览器中，正在跳转到目标网页。");
@@ -272,12 +307,14 @@ function getQuickTips(browser, targetUrl) {
     tips.push("当前环境可能限制下载、跳转、登录或支付唤起，建议改用系统浏览器。");
     tips.push("如果聊天页里还能看到链接，优先直接复制原始地址，这样最稳妥。");
 
-    if (browser.Wechat) {
-      tips.push("部分机型支持从右上角菜单选择“在浏览器打开”，但复制原链接通常兼容性更高。");
+    if (browser.DesktopWechat) {
+      tips.push("微信 PC 端通常可以点击右上角小地球图标切换到系统浏览器，但复制原链接通常兼容性更高。");
+    } else if (browser.Wechat) {
+      tips.push(`部分机型支持从${THREE_DOT_TEXT}菜单选择“在浏览器打开”，但复制原链接通常兼容性更高。`);
     }
 
     if (browser.QQ) {
-      tips.push("若你在 QQ 菜单里看到了“浏览器打开”入口，也可以直接用它跳到系统浏览器。");
+      tips.push(`若你在 QQ 的${THREE_DOT_TEXT}菜单里看到了“浏览器打开”入口，也可以直接用它跳到系统浏览器。`);
     }
   } else {
     tips.push("当前已不在微信 / QQ 内置浏览器中，可以继续正常访问。");
@@ -299,14 +336,18 @@ function App() {
   const shouldRedirect = Boolean(targetUrl && !isBlocked);
   const title = targetUrl
     ? isBlocked
-      ? "单击右上角三个点，选择浏览器打开"
+      ? browser.DesktopWechat
+        ? "请点击右上角小地球图标"
+        : `单击${THREE_DOT_TEXT}，选择浏览器打开`
       : "正在跳转到目标网页"
     : isBlocked
     ? "请返回聊天页面，复制原有地址到浏览器打开"
     : "当前已经不在微信 / QQ 内置浏览器";
   const description = targetUrl
     ? isBlocked
-      ? "检测到当前 URL 后已经拼接了目标网页。请在右上角更多菜单中选择浏览器打开，系统浏览器接管后会自动跳转到真实网页。"
+      ? browser.DesktopWechat
+        ? "检测到当前 URL 后已经拼接了目标网页。请点击右上角小地球图标，系统浏览器接管后会自动跳转到真实网页。"
+        : `检测到当前 URL 后已经拼接了目标网页。请在${THREE_DOT_TEXT}菜单中选择浏览器打开，系统浏览器接管后会自动跳转到真实网页。`
       : "检测到拼接的目标地址，当前环境可直接访问，页面将自动跳转。"
     : isBlocked
     ? "为了避免跳转、登录、下载和唤起能力被内置浏览器拦截，建议回到聊天窗口复制原始链接，再用系统浏览器重新打开。"
@@ -401,6 +442,7 @@ function App() {
 
             <div className="detection-grid">
               <DetectionItem label="微信 UA" active={browser.Wechat} />
+              <DetectionItem label="微信 PC 端" active={browser.DesktopWechat} />
               <DetectionItem label="QQ UA" active={browser.QQ} />
               <DetectionItem label="QQ 浏览器" active={browser.QQBrowser} />
               <DetectionItem label="Safari" active={browser.Safari} />
