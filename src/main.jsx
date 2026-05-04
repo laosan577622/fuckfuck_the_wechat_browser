@@ -176,6 +176,66 @@ function EnvironmentBadge({ browser }) {
 }
 
 
+function SparkGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="m12 3 1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.4L12 3Z"
+        fill="currentColor"
+      />
+      <circle cx="19" cy="18" r="1.6" fill="currentColor" opacity="0.7" />
+      <circle cx="5" cy="18" r="1.2" fill="currentColor" opacity="0.5" />
+    </svg>
+  );
+}
+
+
+function ArrowGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M5 12h13m0 0-5-5m5 5-5 5"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2.4"
+      />
+    </svg>
+  );
+}
+
+
+function CopyGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="8" y="8" width="11" height="12" rx="2.4" fill="none" stroke="currentColor" strokeWidth="2.2" />
+      <path d="M5 16V6a2 2 0 0 1 2-2h9" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2.2" />
+    </svg>
+  );
+}
+
+
+function BlockGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2.2" />
+      <path d="m6.4 6.4 11.2 11.2" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2.2" />
+    </svg>
+  );
+}
+
+
+function LeafGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M20 4C10 4 4 10 4 18v2h2c8 0 14-6 14-16Z" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="2.2" />
+      <path d="M4 20c4-6 8-10 14-14" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2.2" />
+    </svg>
+  );
+}
+
+
 function CheckGlyph() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -458,7 +518,9 @@ function App() {
             <div className="tip-stack">
               {quickTips.map((tip) => (
                 <div className="tip-row" key={tip}>
-                  <span className="tip-bullet" />
+                  <span className="tip-icon" aria-hidden="true">
+                    <SparkGlyph />
+                  </span>
                   <p>{tip}</p>
                 </div>
               ))}
@@ -470,7 +532,7 @@ function App() {
               <div className="status-icon">
                 <ShieldIcon />
               </div>
-              <div>
+              <div className="status-header-copy">
                 <h2>检测结果</h2>
                 <p>把 `navigator.userAgent` 解析后存进 class，页面会基于结果给出提示。</p>
               </div>
@@ -517,19 +579,51 @@ function App() {
 
         <section className="reason-strip">
           <article className="reason-card">
+            <div className="reason-icon" aria-hidden="true">
+              <CopyGlyph />
+            </div>
             <h3>为什么要返回聊天页复制原链接</h3>
             <p>因为很多分享链路会在内置浏览器里被重写、截断，或者无法完整暴露浏览器能力。直接复制原始地址最稳。</p>
           </article>
           <article className="reason-card">
+            <div className="reason-icon" aria-hidden="true">
+              <BlockGlyph />
+            </div>
             <h3>为什么不建议继续在微信 / QQ 内打开</h3>
             <p>登录跳转、下载文件、支付唤起和跨应用拉起都可能被限制，容易出现“页面看起来正常，但功能不完整”的情况。</p>
           </article>
           <article className="reason-card">
+            <div className="reason-icon" aria-hidden="true">
+              <LeafGlyph />
+            </div>
             <h3>什么时候可以继续停留在当前页</h3>
             <p>只有当页面已经在 Safari、Chrome 或系统默认浏览器中打开时，才建议继续向后操作。</p>
           </article>
         </section>
       </main>
+
+      <footer className="page-footer">
+        <div className="footer-inner">
+          <div className="footer-brand">
+            <div className="footer-mark">
+              <ShieldIcon />
+            </div>
+            <div>
+              <strong>UA 守门员</strong>
+              <span>微信 / QQ 内置浏览器检测页</span>
+            </div>
+          </div>
+          <a
+            className="footer-link"
+            href="https://www.577622.xyz"
+            target="_blank"
+            rel="noreferrer"
+          >
+            老三 · www.577622.xyz
+            <ArrowGlyph />
+          </a>
+        </div>
+      </footer>
     </div>
   );
 }
