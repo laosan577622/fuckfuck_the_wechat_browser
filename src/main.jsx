@@ -32,6 +32,47 @@ class BrowserCheck {
 }
 
 
+function getRedirectTargetUrl(locationObject = window.location) {
+  const suffix = `${locationObject.pathname}${locationObject.search}${locationObject.hash}`;
+  const trimmedSuffix = suffix.replace(/^\/+/, "");
+  const candidates = [trimmedSuffix];
+
+  try {
+    candidates.push(decodeURIComponent(trimmedSuffix));
+  } catch {
+    // Keep the raw candidate when the browser receives a partially encoded URL.
+  }
+
+  for (const candidate of candidates) {
+    const matchIndex = candidate.search(/https?:\/\//i);
+
+    if (matchIndex < 0) {
+      continue;
+    }
+
+    const rawTarget = candidate.slice(matchIndex);
+
+    try {
+      const target = new URL(rawTarget);
+
+      if (!["http:", "https:"].includes(target.protocol)) {
+        continue;
+      }
+
+      if (target.href === locationObject.href) {
+        continue;
+      }
+
+      return target.href;
+    } catch {
+      continue;
+    }
+  }
+
+  return "";
+}
+
+
 function ShieldIcon() {
   return (
     <svg viewBox="0 0 64 64" aria-hidden="true">
@@ -157,7 +198,30 @@ function StepCard({ index, step }) {
 }
 
 
-function getHelpSteps(browser) {
+function getHelpSteps(browser, targetUrl) {
+  if (targetUrl) {
+    const sourceName = browser.Wechat ? "微信" : browser.QQ ? "QQ" : "当前应用";
+
+    return [
+      {
+        title: "单击右上角三个点",
+        description: `在${sourceName}内置浏览器右上角打开更多菜单。`,
+      },
+      {
+        title: "选择浏览器打开",
+        description: "在菜单里选择“在浏览器打开”或“浏览器打开”，让系统浏览器接管当前页面。",
+      },
+      {
+        title: "等待环境切换",
+        description: "页面重新进入 Safari、Chrome 或系统默认浏览器后，会再次完成环境检测。",
+      },
+      {
+        title: "自动跳转目标网页",
+        description: "只要检测到不在微信 / QQ 内置浏览器中，就会直接跳转到拼接的目标地址。",
+      },
+    ];
+  }
+
   const sourceName = browser.Wechat ? "微信聊天页" : browser.QQ ? "QQ 聊天页" : "聊天页面";
 
   return [
@@ -181,8 +245,28 @@ function getHelpSteps(browser) {
 }
 
 
-function getQuickTips(browser) {
+function getQuickTips(browser, targetUrl) {
   const tips = [];
+
+  if (targetUrl) {
+    if (browser.Wechat || browser.QQ) {
+      tips.push("已识别到当前 URL 后拼接了目标网页，离开微信 / QQ 后会自动跳转。");
+      tips.push("请使用右上角三个点菜单里的“浏览器打开”，不要继续停留在内置浏览器里访问目标页。");
+
+      if (browser.Wechat) {
+        tips.push("微信里通常在右上角更多菜单中选择“在浏览器打开”。");
+      }
+
+      if (browser.QQ) {
+        tips.push("QQ 里通常在右上角更多菜单中选择“浏览器打开”。");
+      }
+    } else {
+      tips.push("当前已不在微信 / QQ 内置浏览器中，正在跳转到目标网页。");
+      tips.push("如果页面没有自动跳转，可以单击下方按钮手动打开目标地址。");
+    }
+
+    return tips;
+  }
 
   if (browser.Wechat || browser.QQ) {
     tips.push("当前环境可能限制下载、跳转、登录或支付唤起，建议改用系统浏览器。");
@@ -206,17 +290,39 @@ function getQuickTips(browser) {
 
 function App() {
   const [browser] = React.useState(() => new BrowserCheck());
+  const [targetUrl] = React.useState(() => getRedirectTargetUrl());
 
-  const helpSteps = getHelpSteps(browser);
-  const quickTips = getQuickTips(browser);
+  const helpSteps = getHelpSteps(browser, targetUrl);
+  const quickTips = getQuickTips(browser, targetUrl);
 
   const isBlocked = browser.BlockedMessenger;
-  const title = isBlocked
+  const shouldRedirect = Boolean(targetUrl && !isBlocked);
+  const title = targetUrl
+    ? isBlocked
+      ? "单击右上角三个点，选择浏览器打开"
+      : "正在跳转到目标网页"
+    : isBlocked
     ? "请返回聊天页面，复制原有地址到浏览器打开"
     : "当前已经不在微信 / QQ 内置浏览器";
-  const description = isBlocked
+  const description = targetUrl
+    ? isBlocked
+      ? "检测到当前 URL 后已经拼接了目标网页。请在右上角更多菜单中选择浏览器打开，系统浏览器接管后会自动跳转到真实网页。"
+      : "检测到拼接的目标地址，当前环境可直接访问，页面将自动跳转。"
+    : isBlocked
     ? "为了避免跳转、登录、下载和唤起能力被内置浏览器拦截，建议回到聊天窗口复制原始链接，再用系统浏览器重新打开。"
     : "检测结果显示你当前已经在外部浏览器环境中，这个页面可以正常继续访问。";
+
+  React.useEffect(() => {
+    if (!shouldRedirect) {
+      return undefined;
+    }
+
+    const redirectTimer = window.setTimeout(() => {
+      window.location.replace(targetUrl);
+    }, 300);
+
+    return () => window.clearTimeout(redirectTimer);
+  }, [shouldRedirect, targetUrl]);
 
   return (
     <div className="app-shell">
@@ -247,7 +353,13 @@ function App() {
               <EnvironmentBadge browser={browser} />
               <span className="signal-dot" />
               <span className="hero-meta-text">
-                {isBlocked ? "建议切换系统浏览器" : "当前环境可继续访问"}
+                {targetUrl
+                  ? isBlocked
+                    ? "等待用户切换系统浏览器"
+                    : "检测通过，准备跳转"
+                  : isBlocked
+                    ? "建议切换系统浏览器"
+                    : "当前环境可继续访问"}
               </span>
             </div>
 
@@ -255,9 +367,15 @@ function App() {
             <p className="hero-description">{description}</p>
 
             <div className="hero-actions">
-              <a className="capsule-button capsule-button-primary" href="#steps">
-                查看操作步骤
-              </a>
+              {targetUrl && !isBlocked ? (
+                <a className="capsule-button capsule-button-primary" href={targetUrl}>
+                  立即打开目标网页
+                </a>
+              ) : (
+                <a className="capsule-button capsule-button-primary" href="#steps">
+                  {targetUrl ? "查看打开方式" : "查看操作步骤"}
+                </a>
+              )}
             </div>
 
             <div className="tip-stack">
@@ -288,7 +406,15 @@ function App() {
               <DetectionItem label="Safari" active={browser.Safari} />
               <DetectionItem label="Chrome" active={browser.Chrome} />
               <DetectionItem label="iOS 设备" active={browser.Ios} />
+              <DetectionItem label="拼接目标地址" active={Boolean(targetUrl)} />
             </div>
+
+            {targetUrl && (
+              <div className="target-block">
+                <span className="target-label">目标地址</span>
+                <code>{targetUrl}</code>
+              </div>
+            )}
 
             <div className="ua-block">
               <span className="ua-label">当前 UA</span>
