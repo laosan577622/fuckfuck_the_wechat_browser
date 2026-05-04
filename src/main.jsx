@@ -176,11 +176,47 @@ function EnvironmentBadge({ browser }) {
 }
 
 
+function CheckGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="m5 12.5 4.2 4.2L19 7"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="3"
+      />
+    </svg>
+  );
+}
+
+
+function DashGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M7 12h10"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="3"
+      />
+    </svg>
+  );
+}
+
+
 function DetectionItem({ label, active }) {
   return (
     <div className={`detection-item ${active ? "is-active" : ""}`}>
-      <span>{label}</span>
-      <strong>{active ? "已命中" : "未命中"}</strong>
+      <div className="detection-item-main">
+        <span>{label}</span>
+        <strong>{active ? "已命中" : "未命中"}</strong>
+      </div>
+      <span className="detection-indicator" aria-hidden="true">
+        {active ? <CheckGlyph /> : <DashGlyph />}
+      </span>
     </div>
   );
 }
